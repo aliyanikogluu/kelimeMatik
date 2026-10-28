@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Kelime Türet Online</title>
+  <style>
+    :root {
+      --bg: #0f0f1a; --card: #1a1a2e; --card2: #16213e; --accent: #e94560;
+      --accent2: #0f3460; --text: #e8e8e8; --muted: #a0a0b0; --success: #2ecc71;
+      --warning: #f39c12; --border: #2a2a40;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    body {
+      font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+      background: var(--bg); color: var(--text);
+      min-height: 100vh; min-height: 100dvh; line-height: 1.45;
+      overflow-x: hidden; padding-bottom: env(safe-area-inset-bottom, 16px);
+    }
+    .container { max-width: 640px; margin: 0 auto; padding: 14px 14px 32px; }
+    h1 { font-size: 1.4rem; color: var(--accent); text-align: center; margin-bottom: 4px; }
+    .sub { text-align: center; color: var(--muted); font-size: 0.85rem; margin-bottom: 16px; }
+    .screen { display: none; } .screen.active { display: block; }
+    .card { background: var(--card); border-radius: 14px; padding: 16px; margin-bottom: 12px; border: 1px solid var(--border); }
+    label { display: block; margin-bottom: 5px; font-size: 0.8rem; color: var(--muted); }
+    select, input[type="text"] {
+      width: 100%; padding: 13px 14px; border-radius: 10px; border: 1px solid var(--border);
+      background: var(--card2); color: var(--text); font-size: 16px; margin-bottom: 12px; outline: none;
+    }
+    select:focus, input:focus { border-color: var(--accent); }
+    .btn {
+      display: block; width: 100%; padding: 14px; border: none; border-radius: 10px;
+      font-size: 1rem; font-weight: 600; cursor: pointer; text-align: center; margin-bottom: 8px;
+    }
+    .btn:active { transform: scale(0.97); }
+    .btn:disabled { opacity: 0.45; pointer-events: none; }
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-secondary { background: var(--accent2); color: #fff; }
+    .btn-success { background: var(--success); color: #fff; }
+    .btn-ghost { background: transparent; border: 1px solid var(--border); color: var(--text); }
+    .btn-sm { padding: 9px 14px; font-size: 0.9rem; width: auto; display: inline-block; margin: 0; }
+    .row { display: flex; gap: 8px; } .row .btn { flex: 1; margin-bottom: 0; }
+    .room-code {
+      font-size: 1.9rem; letter-spacing: 5px; text-align: center; font-weight: 800;
+      color: var(--accent); padding: 12px; background: var(--card2); border-radius: 12px;
+      margin: 10px 0; user-select: all;
+    }
+    .base-word {
+      font-size: 1.65rem; letter-spacing: 3px; text-align: center; font-weight: 700;
+      color: var(--accent); padding: 14px 8px; background: var(--card2); border-radius: 12px;
+      margin: 10px 0; text-transform: uppercase; word-break: break-all;
+    }
+    .timer { text-align: center; font-size: 1.3rem; font-weight: 700; color: var(--warning); margin: 4px 0 8px; }
+    .timer.urgent { color: var(--accent); animation: pulse 1s infinite; }
+    @keyframes pulse { 50% { opacity: 0.5; } }
+    .score-board { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 10px 0; }
+    .score-item { background: var(--card2); padding: 10px 6px; border-radius: 10px; text-align: center; }
+    .score-item.me { border: 1px solid var(--accent); }
+    .score-item .name { font-size: 0.78rem; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .score-item .score { font-size: 1.2rem; font-weight: 700; color: var(--accent); }
+    .word-input-row { display: flex; gap: 8px; margin: 8px 0; }
+    .word-input-row input { flex: 1; margin-bottom: 0; }
+    .word-list { list-style: none; max-height: 170px; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+    .word-list li { display: flex; justify-content: space-between; padding: 8px 12px; background: var(--card2); border-radius: 8px; margin-bottom: 4px; font-size: 0.92rem; }
+    .pts { color: var(--success); font-weight: 600; }
+    .msg { padding: 9px 12px; border-radius: 8px; margin: 6px 0; font-size: 0.85rem; }
+    .msg-error { background: rgba(192,57,43,0.2); color: #e74c3c; }
+    .msg-success { background: rgba(46,204,113,0.15); color: var(--success); }
+    .msg-info { background: rgba(15,52,96,0.4); color: #7ec8e3; }
+    .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+    .chip { background: var(--card2); padding: 6px 12px; border-radius: 20px; font-size: 0.88rem; }
+    .chip.host::after { content: " 👑"; }
+    .note { text-align: center; font-size: 0.72rem; color: var(--muted); margin-top: 14px; line-height: 1.4; }
+    .status { text-align: center; color: var(--muted); font-size: 0.9rem; margin-bottom: 8px; }
+    .hidden { display: none !important; }
+    @media (max-width: 400px) {
+      .base-word { font-size: 1.35rem; letter-spacing: 2px; }
+      .room-code { font-size: 1.55rem; letter-spacing: 3px; }
+      .score-board { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div id="screen-menu" class="screen active">
+      <h1>🔤 Kelime Türet</h1>
+      <p class="sub">Arkadaşlarınla aynı linkten oda kur, yarış!</p>
+      <div class="card">
+        <label>Kelime Uzunluğu</label>
+        <select id="opt-length">
+          <option value="4">4 harf</option><option value="5">5 harf</option><option value="6">6 harf</option>
+          <option value="7">7 harf</option><option value="8" selected>8 harf</option>
+          <option value="9">9 harf</option><option value="10">10 harf</option>
+        </select>
+        <label>Etap Sayısı</label>
+        <select id="opt-rounds">
+          <option value="1">1 etap</option><option value="2">2 etap</option>
+          <option value="3" selected>3 etap</option><option value="5">5 etap</option>
+        </select>
+        <label>Etap Süresi</label>
+        <select id="opt-time">
+          <option value="60">1 dakika</option><option value="120">2 dakika</option>
+          <option value="180" selected>3 dakika</option><option value="300">5 dakika</option>
+          <option value="0">Süresiz</option>
+        </select>
+      </div>
+      <button class="btn btn-primary" onclick="createRoom()">Oda Kur</button>
+      <button class="btn btn-secondary" onclick="showScreen('join')">Odaya Katıl</button>
+      <button class="btn btn-ghost" onclick="startSolo()">Tek Başına Oyna</button>
+      <p class="note">Tek link · Herkes kendi telefonundan katılır · Firebase</p>
+    </div>
+
+    <div id="screen-join" class="screen">
+      <h1>Odaya Katıl</h1>
+      <div class="card">
+        <label>Oda Kodu</label>
+        <input type="text" id="join-code" placeholder="Örn: A3K9P" maxlength="6" style="text-transform:uppercase;letter-spacing:3px;text-align:center;font-size:1.25rem;">
+        <label>Adın</label>
+        <input type="text" id="join-name" placeholder="İsmin" maxlength="14">
+        <button class="btn btn-primary" onclick="joinRoom()">Katıl</button>
+        <button class="btn btn-ghost" onclick="showScreen('menu')">Geri</button>
+      </div>
+    </div>
+
+    <div id="screen-lobby" class="screen">
+      <h1>Oda Lobisi</h1>
+      <div class="room-code" id="lobby-code">------</div>
+      <p class="status" id="lobby-status">Oyuncular bekleniyor...</p>
+      <div class="card"><div class="chips" id="lobby-players"></div></div>
+      <button class="btn btn-primary hidden" id="btn-host-start" onclick="hostStartGame()">Oyunu Başlat</button>
+      <button class="btn btn-ghost" onclick="leaveRoom()">Ayrıl</button>
+      <p class="note">Kodu arkadaşlarına gönder. Host oyunu başlatır.</p>
+    </div>
+
+    <div id="screen-game" class="screen">
+      <div class="status">Etap <span id="g-round">1</span>/<span id="g-total">3</span> · <span id="g-code"></span></div>
+      <div class="timer" id="g-timer">--:--</div>
+      <div class="base-word" id="g-base">KELİME</div>
+      <div class="score-board" id="g-scores"></div>
+      <div class="card">
+        <div class="word-input-row">
+          <input type="text" id="g-input" placeholder="Kelime yaz..." maxlength="14" autocomplete="off" enterkeyhint="done">
+          <button class="btn btn-success btn-sm" onclick="submitWord()">Ekle</button>
+        </div>
+        <div id="g-fb"></div>
+        <ul class="word-list" id="g-words"></ul>
+        <p style="font-size:0.8rem;color:var(--muted);margin-top:6px;">Skorun: <strong id="g-myscore">0</strong></p>
+      </div>
+      <div class="row hidden" id="host-btns">
+        <button class="btn btn-secondary" onclick="hostEndRound()">Etabı Bitir</button>
+      </div>
+      <button class="btn btn-ghost" onclick="leaveRoom()">Ayrıl</button>
+    </div>
+
+    <div id="screen-results" class="screen">
+      <h1 id="res-title">Etap Sonu</h1>
+      <div class="card" id="res-body"></div>
+      <button class="btn btn-primary hidden" id="btn-next" onclick="hostNextRound()">Sonraki Etap</button>
+      <button class="btn btn-secondary hidden" id="btn-final" onclick="hostShowFinal()">Finali Göster</button>
+      <button class="btn btn-ghost" onclick="leaveRoom()">Menü</button>
+    </div>
+
+    <div id="screen-solo" class="screen">
+      <h1>Tek Başına</h1>
+      <div class="timer" id="s-timer">--:--</div>
+      <div class="base-word" id="s-base">KELİME</div>
+      <div class="card">
+        <div class="word-input-row">
+          <input type="text" id="s-input" placeholder="Kelime..." maxlength="14" autocomplete="off">
+          <button class="btn btn-success btn-sm" onclick="soloAdd()">Ekle</button>
+        </div>
+        <div id="s-fb"></div>
+        <ul class="word-list" id="s-words"></ul>
+        <p style="font-size:0.8rem;color:var(--muted);">Skor: <strong id="s-score">0</strong></p>
+      </div>
+      <button class="btn btn-secondary" onclick="soloEnd()">Bitir</button>
+      <button class="btn btn-ghost" onclick="showScreen('menu')">Menü</button>
+    </div>
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
+  <script>
+    // ===== SENİN FIREBASE CONFIG =====
+    const firebaseConfig = {
+      apiKey: "AIzaSyAyG5TA81LpC97p_IHZ5FLK--it3YJPQp0",
+      authDomain: "kelimatik-15492.firebaseapp.com",
+      databaseURL: "https://kelimatik-15492-default-rtdb.europe-west1.firebasedatabase.app",
+      projectId: "kelimatik-15492",
+      storageBucket: "kelimatik-15492.firebasestorage.app",
+      messagingSenderId: "672817994290",
+      appId: "1:672817994290:web:66cff40c96ca6bc109fa2b"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    // ===== SÖZLÜK =====
+    const WORD_LIST = new Set(["aba","abartı","abartmak","abat","abd","abdest","abide","abla","abone","acele","acemi","acı","acıkmak","acıklı","acımak","ad","ada","adak","adalet","adam","adım","adi","adil","adli","adres","af","aferin","afet","afi","afiş","afiyet","ağ","ağa","ağabey","ağaç","ağır","ağırlık","ağız","ağlamak","ağrı","ah","ahbap","ahenk","ahlak","ahlaklı","ahşap","aile","ait","ajan","ajanda","ak","akademi","akar","akarsu","akasya","akıl","akıllı","akım","akın","akış","akit","aklama","aklamak","akraba","akrep","aksam","aksi","akşam","aktar","aktarmak","aktif","aktör","akü","al","ala","alaka","alan","alarm","alay","albay","alçı","aldanmak","aldatmak","alem","alet","alev","alfa","alfabe","algı","algılamak","alık","alım","alın","alış","alışmak","alışveriş","alkış","alkışlamak","alkol","allah","almak","alp","alt","altı","altın","altmış","altyapı","ama","amaç","aman","amatör","ambar","amca","ameliyat","amerika","amfi","amir","ampul","an","ana","anahtar","analiz","anayasa","ancak","anı","anıt","ani","anket","anlam","anlamak","anlamlı","anlaşma","anlaşmak","anlatmak","anlayış","anma","anons","ant","anten","antika","antrenman","ar","ara","araba","aracı","araç","aralık","arama","aramak","arap","araştırma","araştırmak","arayış","arazi","arda","arı","arınmak","ari","arif","ark","arka","arkadaş","arkeoloji","arma","armağan","armut","arpa","arsa","arsız","arşiv","art","artı","artık","artmak","artist","arzu","as","asa","asabi","asal","asansör","asıl","asır","asi","asil","asit","asker","askerlik","askı","aslan","asma","asmak","aspirin","astar","astım","astronomi","aş","aşama","aşçı","aşı","aşık","aşırı","aşk","aşmak","at","ata","atak","atamak","atasözü","ateş","atik","atıl","atılgan","atış","atkı","atlamak","atlet","atlı","atma","atmak","atom","atölye","av","avcı","avize","avlamak","avlu","avukat","avunmak","avutmak","ay","aya","ayak","ayakkabı","ayar","ayarlamak","ayaz","aydın","aydınlık","ayet","ayı","ayıp","ayırmak","aykırı","ayla","aylık","ayna","aynen","aynı","ayran","ayrı","ayrıca","ayrılmak","ayrım","ayrıntı","ayva","az","aza","azalmak","azaltmak","azap","azar","azarlamak","azat","azgın","azı","azınlık","azim","azimli","aziz","azmak","el","kel","lim","mil","kil","ekim","kile","melik","ile","mi","ki","lik","emel","kele","lime","emek","kem","lem","kelime","ilem","mek","kim","eli","eki","kalem","elma","kelebek","kelam","ilim","imge","imek","ilik","ilke","ilmek","imla","inanç","ince","inci","inek","insan","ipek","irade","ırmak","ıslak","ışık","ışın","iş","işaret","işçi","işlem","işlemek","işsiz","iyi","iyilik","iz","izlemek","izin","kahve","kale","kalem","kalın","kalıp","kalıcı","kalkmak","kamera","kamp","kanat","kandırma","kanıt","kanka","kanun","kap","kapak","kapalı","kapı","kaplan","kapmak","kaptan","kar","kara","karakter","karar","kardeş","kare","karga","kargo","karın","karışmak","karpuz","karşı","kart","kartal","kasa","kasaba","kasap","kasım","kaşık","kat","katı","katılmak","katkı","katmak","kavga","kavram","kavun","kayak","kaybetmek","kaygı","kaymak","kaynak","kayıp","kayıt","kaz","kaza","kazan","kazanç","kazmak","kebap","kedi","kek","kel","kelebek","keman","kemer","kemik","kenar","kendi","kent","kepçe","kes","kesici","kesim","kesin","kesmek","kestane","keşfetmek","keşke","keyif","kez","kıl","kılıç","kılık","kırık","kırmak","kısa","kış","kıvılcım","kız","kızgın","kızıl","kızmak","kibar","kibrit","kil","kile","kilim","kilit","kilo","kilometre","kim","kimlik","kimse","kimya","kin","kira","kiraz","kirli","kirpik","kitap","klavye","klima","klinik","kobra","koca","kocaman","koç","kod","kof","koklamak","koku","kol","kola","kolay","kolej","koleksiyon","kolonya","koltuk","komedi","komik","komiser","komisyon","komple","komplo","komşu","komutan","konak","konferans","kongre","konmak","konserve","kont","kontrol","konu","konuk","konum","konuşmak","konut","koparmak","kopmak","kopya","korkak","korkmak","korku","korkunç","korna","koro","koridor","korumak","koşmak","koşu","koşul","kot","kova","kovalamak","kovmak","koymak","koyu","koyun","koz","koza","köfte","kök","kömür","köpek","köprü","köpük","kör","körfez","köse","köşk","kötü","kötülük","köy","köylü","kral","kraliçe","kramp","kravat","kredi","krem","krema","kriz","kristal","kritik","krom","kronik","kuaför","kubbe","kucak","kudret","kuş","kuşak","kuşku","kutlama","kutlamak","kutlu","kutu","kutup","kuvvet","kuvvetli","kuyruk","kuyu","kuyumcu","kuzen","kuzey","kuzu","küçük","küçülmek","küf","küfür","kükürt","kül","külah","kültür","kümes","künefe","küp","küpe","küre","kürek","kürk","kürsü","küsmek","kütle","kütüphane","küvet"]);
+    const BY_LEN = {};
+    WORD_LIST.forEach(w => { const L = w.length; if (!BY_LEN[L]) BY_LEN[L] = []; BY_LEN[L].push(w); });
+
+    // ===== STATE =====
+    let myId = localStorage.getItem('kid') || ('p' + Math.random().toString(36).slice(2, 9));
+    localStorage.setItem('kid', myId);
+    let myName = localStorage.getItem('kn') || '';
+    let roomCode = null, roomRef = null, isHost = false, unsub = null, timerIv = null;
+    let solo = { words: [], score: 0, base: '', left: 0 };
+
+    function showScreen(id) {
+      document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+      document.getElementById('screen-' + id).classList.add('active');
+    }
+    function pickWord(len) {
+      let list = BY_LEN[len] || [];
+      if (!list.length) { for (let L = len; L >= 4; L--) if (BY_LEN[L]?.length) { list = BY_LEN[L]; break; } }
+      return (list[Math.floor(Math.random() * list.length)] || 'kelime').toLocaleUpperCase('tr-TR');
+    }
+    function canForm(word, base) {
+      const b = [...base.toLocaleLowerCase('tr-TR')].sort();
+      const w = [...word.toLocaleLowerCase('tr-TR')].sort();
+      let i = 0;
+      for (const ch of w) { while (i < b.length && b[i] < ch) i++; if (i >= b.length || b[i] !== ch) return false; i++; }
+      return true;
+    }
+    function genCode() {
+      const c = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+      let s = ''; for (let i = 0; i < 5; i++) s += c[Math.floor(Math.random() * c.length)];
+      return s;
+    }
+
+    // ===== ROOM =====
+    function createRoom() {
+      const name = prompt('Adın?', myName || 'Host');
+      if (!name) return;
+      myName = name.trim().slice(0, 14);
+      localStorage.setItem('kn', myName);
+      isHost = true;
+      roomCode = genCode();
+      const settings = {
+        length: +document.getElementById('opt-length').value,
+        rounds: +document.getElementById('opt-rounds').value,
+        timeLimit: +document.getElementById('opt-time').value,
+        currentRound: 1
+      };
+      roomRef = db.ref('rooms/' + roomCode);
+      roomRef.set({
+        hostId: myId,
+        status: 'lobby',
+        settings,
+        baseWord: '',
+        timerEnd: null,
+        createdAt: Date.now(),
+        players: { [myId]: { name: myName, score: 0, totalScore: 0, words: [] } }
+      }).then(() => {
+        listenRoom();
+        showScreen('lobby');
+        document.getElementById('lobby-code').textContent = roomCode;
+        document.getElementById('btn-host-start').classList.remove('hidden');
+      }).catch(e => alert('Oda kurulamadı: ' + e.message));
+    }
+
+    function joinRoom() {
+      const code = document.getElementById('join-code').value.trim().toUpperCase();
+      const name = document.getElementById('join-name').value.trim().slice(0, 14);
+      if (!code || code.length < 4) return alert('Oda kodu gir');
+      if (!name) return alert('İsim gir');
+      myName = name; localStorage.setItem('kn', myName);
+      roomCode = code; isHost = false;
+      roomRef = db.ref('rooms/' + roomCode);
+      roomRef.once('value').then(snap => {
+        if (!snap.exists()) return alert('Oda bulunamadı');
+        const data = snap.val();
+        if (data.status === 'finished') return alert('Bu oda bitmiş');
+        roomRef.child('players/' + myId).set({ name: myName, score: 0, totalScore: 0, words: [] })
+          .then(() => {
+            listenRoom();
+            showScreen('lobby');
+            document.getElementById('lobby-code').textContent = roomCode;
+            document.getElementById('btn-host-start').classList.add('hidden');
+          });
+      }).catch(e => alert('Katılamadı: ' + e.message));
+    }
+
+    function listenRoom() {
+      if (unsub) roomRef.off();
+      roomRef.on('value', snap => {
+        const data = snap.val();
+        if (!data) { alert('Oda silindi'); leaveRoom(true); return; }
+        handleUpdate(data);
+      });
+    }
+
+    function handleUpdate(data) {
+      const players = data.players || {};
+      if (!players[myId]) { leaveRoom(true); return; }
+      isHost = data.hostId === myId;
+
+      if (data.status === 'lobby') {
+        showScreen('lobby');
+        document.getElementById('lobby-code').textContent = roomCode;
+        document.getElementById('btn-host-start').classList.toggle('hidden', !isHost);
+        document.getElementById('lobby-players').innerHTML = Object.entries(players).map(([id, p]) =>
+          `<span class="chip ${id === data.hostId ? 'host' : ''}">${p.name}</span>`
+        ).join('');
+        document.getElementById('lobby-status').textContent = Object.keys(players).length + ' oyuncu';
+      }
+
+      if (data.status === 'playing') {
+        showScreen('game');
+        document.getElementById('g-round').textContent = data.settings.currentRound;
+        document.getElementById('g-total').textContent = data.settings.rounds;
+        document.getElementById('g-code').textContent = roomCode;
+        document.getElementById('g-base').textContent = data.baseWord || '???';
+        document.getElementById('host-btns').classList.toggle('hidden', !isHost);
+        document.getElementById('g-scores').innerHTML = Object.entries(players).map(([id, p]) =>
+          `<div class="score-item ${id === myId ? 'me' : ''}"><div class="name">${p.name}</div><div class="score">${p.score || 0}</div></div>`
+        ).join('');
+        const me = players[myId];
+        document.getElementById('g-words').innerHTML = (me.words || []).slice().reverse().map(w =>
+          `<li><span>${w.toLocaleUpperCase('tr-TR')}</span><span class="pts">${w.length * 10}</span></li>`
+        ).join('');
+        document.getElementById('g-myscore').textContent = me.score || 0;
+        if (data.timerEnd && data.settings.timeLimit > 0) startLocalTimer(data.timerEnd);
+        else document.getElementById('g-timer').textContent = data.settings.timeLimit === 0 ? 'Süresiz' : '--:--';
+      }
+
+      if (data.status === 'roundEnd' || data.status === 'finished') {
+        showScreen('results');
+        const isFinal = data.status === 'finished';
+        document.getElementById('res-title').textContent = isFinal ? '🏆 Final' : `Etap ${data.settings.currentRound} Sonu`;
+        let html = '';
+        if (!isFinal) html += `<p class="msg msg-info">Kelime: <strong>${data.baseWord}</strong></p>`;
+        const sorted = Object.entries(players).sort((a, b) => (isFinal ? (b[1].totalScore || 0) : (b[1].score || 0)) - (isFinal ? (a[1].totalScore || 0) : (a[1].score || 0)));
+        sorted.forEach(([id, p]) => {
+          const sc = isFinal ? (p.totalScore || 0) : (p.score || 0);
+          html += `<h3 style="margin:10px 0 4px;color:var(--accent)">${p.name} — ${sc}p</h3>`;
+          if (!isFinal) html += `<p style="font-size:0.85rem;color:var(--muted)">${(p.words || []).map(w => w.toLocaleUpperCase('tr-TR')).join(', ') || '—'}</p>`;
+        });
+        document.getElementById('res-body').innerHTML = html;
+        document.getElementById('btn-next').classList.toggle('hidden', !isHost || isFinal);
+        document.getElementById('btn-final').classList.toggle('hidden', !isHost || isFinal || data.settings.currentRound < data.settings.rounds);
+      }
+    }
+
+    function startLocalTimer(endTs) {
+      if (timerIv) clearInterval(timerIv);
+      const tick = () => {
+        const left = Math.max(0, Math.ceil((endTs - Date.now()) / 1000));
+        const el = document.getElementById('g-timer');
+        if (el) {
+          el.textContent = Math.floor(left / 60) + ':' + String(left % 60).padStart(2, '0');
+          el.classList.toggle('urgent', left <= 30);
+        }
+        if (left <= 0) { clearInterval(timerIv); if (isHost) hostEndRound(); }
+      };
+      tick(); timerIv = setInterval(tick, 300);
+    }
+
+    function hostStartGame() {
+      if (!isHost || !roomRef) return;
+      roomRef.once('value').then(snap => {
+        const data = snap.val();
+        const base = pickWord(data.settings.length);
+        const timerEnd = data.settings.timeLimit > 0 ? Date.now() + data.settings.timeLimit * 1000 : null;
+        const updates = { status: 'playing', baseWord: base, timerEnd, 'settings/currentRound': 1 };
+        Object.keys(data.players || {}).forEach(pid => {
+          updates[`players/${pid}/score`] = 0;
+          updates[`players/${pid}/words`] = [];
+        });
+        roomRef.update(updates);
+      });
+    }
+
+    function hostEndRound() {
+      if (!isHost || !roomRef) return;
+      roomRef.once('value').then(snap => {
+        const data = snap.val();
+        const updates = { status: 'roundEnd' };
+        Object.entries(data.players || {}).forEach(([pid, p]) => {
+          updates[`players/${pid}/totalScore`] = (p.totalScore || 0) + (p.score || 0);
+        });
+        roomRef.update(updates);
+      });
+    }
+
+    function hostNextRound() {
+      if (!isHost || !roomRef) return;
+      roomRef.once('value').then(snap => {
+        const data = snap.val();
+        const next = (data.settings.currentRound || 1) + 1;
+        if (next > data.settings.rounds) { roomRef.update({ status: 'finished' }); return; }
+        const base = pickWord(data.settings.length);
+        const timerEnd = data.settings.timeLimit > 0 ? Date.now() + data.settings.timeLimit * 1000 : null;
+        const updates = { status: 'playing', baseWord: base, timerEnd, 'settings/currentRound': next };
+        Object.keys(data.players || {}).forEach(pid => {
+          updates[`players/${pid}/score`] = 0;
+          updates[`players/${pid}/words`] = [];
+        });
+        roomRef.update(updates);
+      });
+    }
+
+    function hostShowFinal() {
+      if (!isHost || !roomRef) return;
+      roomRef.update({ status: 'finished' });
+    }
+
+    function submitWord() {
+      const input = document.getElementById('g-input');
+      let word = input.value.trim().toLocaleLowerCase('tr-TR');
+      const fb = document.getElementById('g-fb');
+      fb.innerHTML = '';
+      if (word.length < 2) return;
+      roomRef.once('value').then(snap => {
+        const data = snap.val();
+        if (!data || data.status !== 'playing') return;
+        const me = data.players[myId];
+        if ((me.words || []).includes(word)) { fb.innerHTML = '<div class="msg msg-error">Zaten ekledin</div>'; return; }
+        if (!canForm(word, data.baseWord)) { fb.innerHTML = '<div class="msg msg-error">Harfler yetmiyor</div>'; return; }
+        if (!WORD_LIST.has(word)) { fb.innerHTML = '<div class="msg msg-error">Sözlükte yok</div>'; return; }
+        const pts = word.length * 10;
+        const newWords = [...(me.words || []), word];
+        roomRef.child('players/' + myId).update({ words: newWords, score: (me.score || 0) + pts });
+        input.value = '';
+        fb.innerHTML = `<div class="msg msg-success">+${pts} puan!</div>`;
+        setTimeout(() => fb.innerHTML = '', 1400);
+      });
+    }
+    document.getElementById('g-input').addEventListener('keydown', e => { if (e.key === 'Enter') submitWord(); });
+
+    function leaveRoom(silent) {
+      if (timerIv) clearInterval(timerIv);
+      if (roomRef && myId) {
+        roomRef.child('players/' + myId).remove().catch(() => {});
+        roomRef.off();
+      }
+      roomRef = null; roomCode = null; isHost = false;
+      if (!silent) showScreen('menu');
+    }
+
+    // ===== SOLO =====
+    function startSolo() {
+      const len = +document.getElementById('opt-length').value;
+      const tl = +document.getElementById('opt-time').value;
+      solo.base = pickWord(len); solo.words = []; solo.score = 0; solo.left = tl;
+      document.getElementById('s-base').textContent = solo.base;
+      document.getElementById('s-words').innerHTML = '';
+      document.getElementById('s-score').textContent = '0';
+      showScreen('solo');
+      if (tl > 0) {
+        if (timerIv) clearInterval(timerIv);
+        timerIv = setInterval(() => {
+          solo.left--;
+          document.getElementById('s-timer').textContent = Math.floor(solo.left / 60) + ':' + String(solo.left % 60).padStart(2, '0');
+          if (solo.left <= 0) { clearInterval(timerIv); soloEnd(); }
+        }, 1000);
+      } else document.getElementById('s-timer').textContent = 'Süresiz';
+    }
+    function soloAdd() {
+      const input = document.getElementById('s-input');
+      let word = input.value.trim().toLocaleLowerCase('tr-TR');
+      const fb = document.getElementById('s-fb');
+      if (word.length < 2) return;
+      if (solo.words.includes(word)) { fb.innerHTML = '<div class="msg msg-error">Var</div>'; return; }
+      if (!canForm(word, solo.base)) { fb.innerHTML = '<div class="msg msg-error">Harf yok</div>'; return; }
+      if (!WORD_LIST.has(word)) { fb.innerHTML = '<div class="msg msg-error">Sözlükte yok</div>'; return; }
+      solo.words.push(word); solo.score += word.length * 10; input.value = '';
+      document.getElementById('s-words').innerHTML = solo.words.slice().reverse().map(w =>
+        `<li><span>${w.toLocaleUpperCase('tr-TR')}</span><span class="pts">${w.length * 10}</span></li>`
+      ).join('');
+      document.getElementById('s-score').textContent = solo.score;
+      fb.innerHTML = `<div class="msg msg-success">+${word.length * 10}</div>`;
+    }
+    document.getElementById('s-input').addEventListener('keydown', e => { if (e.key === 'Enter') soloAdd(); });
+    function soloEnd() {
+      if (timerIv) clearInterval(timerIv);
+      alert('Skor: ' + solo.score + '\n' + (solo.words.join(', ') || 'kelime yok'));
+      showScreen('menu');
+    }
+  </script>
+</body>
+</html>
